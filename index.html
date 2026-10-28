@@ -163,4 +163,87 @@ $('pv').addEventListener('click',e=>{const t=e.target.closest('[data-f]');if(!t)
 const t0=new Date();$('dt').value=t0.getFullYear()+'-'+String(t0.getMonth()+1).padStart(2,'0')+'-'+String(t0.getDate()).padStart(2,'0');
 typeChanged();
 if(window.claude&&claude.use)claude.use('downloads').then(dl=>{if(!dl)return;const b=$('dl');b.hidden=false;b.onclick=async()=>{const html='<!doctype html><meta charset="utf-8"><title>Proposal</title><style>'+$('css').textContent+'</style><style>'+$('bgs').textContent+'</style><div id="pv">'+$('pv').innerHTML+'</div>';try{await dl.save({filename:'proposal.html',data:html})}catch(e){}}}).catch(()=>{});
+/* ===== FIX PATCH — isko original file me </script> se JUST PEHLE paste karo ===== */
+
+/* 1) CSS: font fallback (Calibri na mile to Arial ko Calibri jitna narrow karo), Section 8 total bold */
+(function(){
+  const s=document.createElement('style');
+  s.textContent=
+   '@font-face{font-family:CalFB;src:local("Arial"),local("Helvetica"),local("Liberation Sans"),local("Arimo");size-adjust:91%}'+
+   '.pg{font-family:Calibri,CalibriEmb,CalFB,Arial,sans-serif}'+
+   '.t2{font-family:Calibri,CalibriEmb,CalFB,Arial,sans-serif}'+
+   '.t2.s8t tr.tot td,.t2.s8t tr.tot td *{font-weight:700!important}';
+  document.head.appendChild(s);
+})();
+
+/* 2) Email ID: label aur value ek hi line me (overlap khatam), same font + black colour */
+(function(){
+  const p=D.pvt[0];
+  p.pre=p.pre
+    .replace(/<div class="l"[^>]*top:276\.8pt[^>]*>\s*<span[^>]*>\{\{email\}\}<\/span>\s*<\/div>/,'')
+    .replace('>Email ID:</div>','>Email ID: {{email}}</div>');
+})();
+
+/* 3) Section 8: Total row bold (label + amount) */
+(function(){
+  const _ins=()=>document.querySelectorAll('#pv .t2').forEach(t=>{
+    const two=t.querySelectorAll('colgroup col').length==2;      // s8 table = 2 columns
+    t.classList.toggle('s8t',two);
+    if(two){const r=t.querySelector('tr:last-child');if(r)r.classList.add('tot');}
+  });
+  window.__fixTot=_ins;
+})();
+
+/* 4) Salutation: Dear Sir / Dear Ma’am / Dear Sir/Ma’am / Dear Team / custom name */
+(function(){
+  const sel=$('sals');
+  if(![...sel.options].some(o=>o.value=='Dear Team,')){
+    const o=new Option('Dear Team,','Dear Team,');
+    sel.insertBefore(o,sel.querySelector('option[value="__c"]'));
+  }
+})();
+function salText(){
+  const s=v('sals');$('salc').hidden=s!='__c';
+  if(s!='__c')return s;
+  const n=v('salc').trim().replace(/^dear\s+/i,'').replace(/,\s*$/,'');   // "Dear Rahul," type kare to double "Dear" na ho
+  return 'Dear '+(n||'Sir')+',';
+}
+
+/* 5) Form cards ab page-by-page (aur page ke andar upar se neeche) arrange honge */
+function layout(){
+  const pgs=[...document.querySelectorAll('#pv .pg')];
+  document.querySelectorAll('#form .card[data-g]').forEach((c,ix)=>{
+    let best=null;
+    c.dataset.g.split(' ').forEach(k=>{
+      const e=document.querySelector('#pv [data-f="'+k+'"]');if(!e)return;
+      const pg=e.closest('.pg'),n=pgs.indexOf(pg)+1;
+      const y=e.getBoundingClientRect().top-pg.getBoundingClientRect().top;
+      if(n&&(!best||n<best.n||(n==best.n&&y<best.y)))best={n,y};
+    });
+    c.style.order=best?best.n*10000+Math.max(0,Math.round(best.y)):900000000+ix;
+    const b=c.querySelector('.pgb');if(b)b.textContent=best?'Page '+best.n:'—';
+  });
+}
+
+/* 6) Overflow check: agar fee lines zyada ho gayi aur page ke niche se content cut ho raha ho to red warning */
+function checkOverflow(){
+  const bad=[];
+  document.querySelectorAll('#pv .pg').forEach((p,i)=>{
+    const fl=p.querySelector('.fl');
+    if(fl&&fl.getBoundingClientRect().bottom>p.getBoundingClientRect().bottom-12)bad.push(i+1);
+  });
+  const s=document.querySelector('.pt span:last-child');
+  if(s){s.textContent=bad.length?'⚠ Page '+bad.join(', ')+' ka content niche se cut ho raha hai — fee lines kam karo':'Updates as you type';
+        s.style.color=bad.length?'#dc2626':'';s.style.fontWeight=bad.length?'700':'';}
+}
+/* fit() render ke end me hamesha chalta hai, isliye yahin hook kiya (event handlers purane render ko hi call karte hain) */
+function fit(){
+  const w=$('pvw').clientWidth,z=Math.min(1,(w-38)/794);$('pv').style.zoom=z;
+  if(window.__fixTot)window.__fixTot();
+  checkOverflow();
+}
+
+/* patch apply hone ke baad ek baar re-render */
+render();
+/* ===== END PATCH ===== */
 </script></body></html>
